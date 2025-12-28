@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pizzería Premium | Delivery</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --accent: #ff4757;
+            --gold: #ffa502;
+            --dark-bg: #121212;
+            --card-bg: #1e1e1e;
+            --text-light: #f1f2f6;
+            --text-muted: #a4b0be;
+            --success: #2ed573;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { background-color: var(--dark-bg); color: var(--text-light); line-height: 1.6; }
+
+        /* --- HEADER --- */
+        header {
+            background: rgba(18, 18, 18, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 0.8rem 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            border-bottom: 1px solid #333;
+        }
+        .logo { font-size: 1.1rem; font-weight: 700; color: var(--accent); text-transform: uppercase; }
+        .status-indicator { font-size: 0.65rem; display: flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 10px; }
+        .status-open { color: var(--success); background: rgba(46, 213, 115, 0.1); }
+        .status-closed { color: var(--accent); background: rgba(255, 71, 87, 0.1); }
+
+        /* --- CATEGORÍAS --- */
+        .categories-nav {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 20px;
+            overflow-x: auto;
+        }
+        .cat-btn {
+            background: #2a2a2a;
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            white-space: nowrap;
+            font-size: 0.9rem;
+        }
+        .cat-btn.active { background: var(--accent); }
+
+        /* --- NOTIFICACIÓN MÓVIL OPTIMIZADA --- */
+        #toast { 
+            position: fixed; 
+            bottom: 20px; 
+            left: 50%; 
+            transform: translateX(-50%) translateY(100px); 
+            background: var(--success); 
+            color: #000; 
+            padding: 10px 20px; 
+            border-radius: 12px; 
+            z-index: 5000; 
+            transition: 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28); 
+            font-weight: 700;
+            font-size: 0.85rem;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: auto;
+            max-width: 85%;
+        }
+        #toast.show { transform: translateX(-50%) translateY(0); }
+
+        /* --- PRODUCTOS (BODY) --- */
+        .container { max-width: 1200px; margin: 0 auto; padding: 10px 20px 50px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        
+        .pizza-card { background: var(--card-bg); border-radius: 15px; overflow: hidden; border: 1px solid #333; transition: 0.3s; }
+        .pizza-card.hidden { display: none; }
+        .pizza-img { width: 100%; height: 160px; object-fit: cover; }
+        .pizza-info { padding: 15px; }
+        
+        .options-group { margin-top: 10px; background: #252525; padding: 10px; border-radius: 10px; }
+        .options-group label { display: block; font-size: 0.75rem; color: var(--gold); margin-bottom: 3px; font-weight: 600; }
+        select { width: 100%; background: #333; color: white; border: 1px solid #444; padding: 8px; border-radius: 5px; font-size: 0.85rem; outline: none; }
+        
+        .extras-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 8px; }
+        .extra-option { font-size: 0.7rem; display: flex; align-items: center; gap: 5px; cursor: pointer; }
+
+        .price-tag { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; }
+        .add-btn { background: var(--accent); color: white; border: none; padding: 10px 18px; border-radius: 10px; cursor: pointer; font-weight: 600; }
+
+        /* --- CARRITO SIDEBAR --- */
+        .cart-overlay { position: fixed; top: 0; right: -100%; width: 100%; max-width: 400px; height: 100%; background: var(--card-bg); z-index: 2000; transition: 0.4s; display: flex; flex-direction: column; }
+        .cart-overlay.active { right: 0; }
+        .cart-body { flex: 1; padding: 20px; overflow-y: auto; }
+        .cart-item { background: #2a2a2a; padding: 12px; border-radius: 12px; margin-bottom: 10px; position: relative; }
+        .remove-item { position: absolute; top: 10px; right: 10px; color: var(--accent); cursor: pointer; }
+
+        /* --- FORMULARIO --- */
+        #order-form { display: none; flex-direction: column; gap: 10px; margin-top: 15px; }
+        input { padding: 12px; border-radius: 8px; border: 1px solid #444; background: #222; color: white; font-size: 0.9rem; outline: none; }
+        input.error { border-color: var(--accent); }
+        .phone-hint { font-size: 0.7rem; color: var(--text-muted); margin-top: -5px; padding-left: 5px; }
+
+        #whatsapp-btn { 
+            display: none; background: #25d366; color: white; text-align: center; 
+            padding: 15px; border-radius: 10px; text-decoration: none; font-weight: bold; 
+        }
+        .btn-next { width: 100%; padding: 15px; background: var(--gold); border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div>
+        <div class="logo">🍕 Pizza Cubana</div>
+        <div id="business-status" class="status-indicator"></div>
+    </div>
+    <div onclick="toggleCart()" style="position: relative; cursor: pointer; padding: 5px;">
+        <i class="fas fa-shopping-bag" style="font-size: 1.5rem;"></i>
+        <span id="cart-count" style="position: absolute; top: 0; right: 0; background: var(--accent); font-size: 0.65rem; padding: 2px 6px; border-radius: 50%;">0</span>
+    </div>
+</header>
+
+<nav class="categories-nav">
+    <button class="cat-btn active" onclick="filterCategory('todas', this)">Todas</button>
+    <button class="cat-btn" onclick="filterCategory('pizzas', this)">Pizzas</button>
+    <button class="cat-btn" onclick="filterCategory('entrantes', this)">Entrantes</button>
+    <button class="cat-btn" onclick="filterCategory('bebidas', this)">Bebidas</button>
+</nav>
+
+<div class="container">
+    <div class="grid" id="menu-grid">
+        
+        <!-- PRODUCTO 1: PIZZA -->
+        <div class="pizza-card" data-category="pizzas" data-name="Pizza Napolitana">
+            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTJrciWk89zIsYeLZnR73vq43QcPIwKGrNcQQ&s" class="pizza-img">
+            <div class="pizza-info">
+                <h3>Pizza Napolitana</h3>
+                <p style="font-size:0.75rem; color:var(--text-muted)">Salsa de la casa y doble queso.</p>
+                <div class="options-group">
+                    <label>Tamaño:</label>
+                    <select class="size-select">
+                        <option value="Personal" data-price="800">Personal - 800 CUP</option>
+                        <option value="Mediana" data-price="1200">Mediana - 1200 CUP</option>
+                        <option value="Familiar" data-price="1800">Familiar - 1800 CUP</option>
+                    </select>
+                    <label style="margin-top:8px">Extras:</label>
+                    <div class="extras-grid">
+                        <label class="extra-option"><input type="checkbox" value="Queso" data-price="250"> Queso (+250)</label>
+                        <label class="extra-option"><input type="checkbox" value="Jamón" data-price="200"> Jamón (+200)</label>
+                    </div>
+                </div>
+                <div class="price-tag">
+                    <span></span>
+                    <button class="add-btn" onclick="addToCart(this)">Añadir +</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PRODUCTO 2: PIZZA -->
+        <div class="pizza-card" data-category="pizzas" data-name="Pepperoni Supreme">
+            <img src="https://images.unsplash.com/photo-1628840042765-356cda07504e?w=500" class="pizza-img">
+            <div class="pizza-info">
+                <h3>Pepperoni Supreme</h3>
+                <p style="font-size:0.75rem; color:var(--text-muted)">Cargada de Pepperoni crujiente.</p>
+                <div class="options-group">
+                    <label>Tamaño:</label>
+                    <select class="size-select">
+                        <option value="Personal" data-price="1000">Personal - 1000 CUP</option>
+                        <option value="Mediana" data-price="1500">Mediana - 1500 CUP</option>
+                        <option value="Familiar" data-price="2200">Familiar - 2200 CUP</option>
+                    </select>
+                </div>
+                <div class="price-tag">
+                    <span></span>
+                    <button class="add-btn" onclick="addToCart(this)">Añadir +</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PRODUCTO 3: ENTRANTE -->
+        <div class="pizza-card" data-category="entrantes" data-name="Pizza Hawaiana">
+            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS8W_bMXGMSIDWSfXNLGkT3f5lLTJrNKvgByw&s" class="pizza-img">
+            <div class="pizza-info">
+                <h3>Pizza Hawaiana</h3>
+                <p style="font-size:0.75rem; color:var(--text-muted)">combina sabores dulces y salados, con una cubierta de salsa de tomate, queso mozzarella, jamón cocido y piña.</p>
+                <div class="price-tag">
+                    <span style="color:var(--gold); font-weight:bold" data-single-price="450">450 CUP</span>
+                    <button class="add-btn" onclick="addToCart(this)">Añadir +</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PRODUCTO 4: BEBIDA -->
+        <div class="pizza-card" data-category="bebidas" data-name="Refresco Lata">
+            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRK0UZoSk-dmb2Etz_nZBIr1Ib1GUb9uvAYGw&s" class="pizza-img">
+            <div class="pizza-info">
+                <h3>Refresco Lata</h3>
+                <p style="font-size:0.75rem; color:var(--text-muted)">Sabor sujeto a disponibilidad.</p>
+                <div class="price-tag">
+                    <span style="color:var(--gold); font-weight:bold" data-single-price="250">250 CUP</span>
+                    <button class="add-btn" onclick="addToCart(this)">Añadir +</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Notificación -->
+<div id="toast"><i class="fas fa-check-circle"></i> Añadido a la cesta</div>
+
+<!-- Carrito Sidebar -->
+<div class="cart-overlay" id="cart-sidebar">
+    <div style="padding: 20px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;">
+        <h3>Mi Pedido</h3>
+        <i class="fas fa-times" onclick="toggleCart()" style="cursor: pointer;"></i>
+    </div>
+    
+    <div class="cart-body" id="cart-items">
+        <p style="text-align:center; color:var(--text-muted); margin-top:20px;">Carrito vacío</p>
+    </div>
+
+    <div style="padding: 20px; background: #1a1a1a;">
+        <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 10px;">
+            <span>Total:</span>
+            <span id="total-price">0 CUP</span>
+        </div>
+        
+        <button class="btn-next" onclick="showForm()" id="btn-next-step">CONTINUAR</button>
+
+        <form id="order-form">
+            <input type="text" id="name" placeholder="Nombre Completo" oninput="validateForm()">
+            <input type="text" id="address" placeholder="Dirección de Entrega" oninput="validateForm()">
+            <input type="text" id="landmark" placeholder="Punto de Referencia" oninput="validateForm()">
+            <input type="tel" id="phone" placeholder="Número de Teléfono" oninput="validateForm()">
+            <!--<p class="phone-hint">Formato: +53 [espacio] 8 números</p>-->
+            
+            <a id="whatsapp-btn" href="#" target="_blank">
+                <i class="fab fa-whatsapp"></i> Ordenar:
+            </a>
+        </form>
+    </div>
+</div>
+
+<script>
+    const WHATSAPP_NUMBER = "5353910527";
+    let cart = [];
+
+    // --- FILTRAR CATEGORÍAS ---
+    function filterCategory(cat, btn) {
+        document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        document.querySelectorAll('.pizza-card').forEach(card => {
+            if(cat === 'todas' || card.dataset.category === cat) {
+                card.classList.remove('hidden');
+            } else {
+                card.classList.add('hidden');
+            }
+        });
+    }
+
+    // --- AÑADIR AL CARRITO (Lee del DOM) ---
+    function addToCart(btn) {
+        const card = btn.closest('.pizza-card');
+        const name = card.dataset.name;
+        const sizeSelect = card.querySelector('.size-select');
+        
+        let basePrice = 0;
+        let sizeName = "";
+        let selectedExtras = [];
+
+        if(sizeSelect) {
+            const selectedOption = sizeSelect.options[sizeSelect.selectedIndex];
+            basePrice = parseInt(selectedOption.dataset.price);
+            sizeName = selectedOption.value;
+            
+            // Extras
+            card.querySelectorAll('input[type="checkbox"]:checked').forEach(chk => {
+                selectedExtras.push({
+                    nombre: chk.parentElement.textContent.trim().split(' (')[0],
+                    precio: parseInt(chk.dataset.price)
+                });
+                chk.checked = false; // reset
+            });
+        } else {
+            // Productos simples (bebidas/entrantes)
+            basePrice = parseInt(card.querySelector('[data-single-price]').dataset.singlePrice);
+        }
+
+        cart.push({
+            uniqueId: Date.now(),
+            nombre: name,
+            tamano: sizeName,
+            precioBase: basePrice,
+            extras: selectedExtras
+        });
+
+        updateCartUI();
+        showToast();
+    }
+
+    function updateCartUI() {
+        const container = document.getElementById('cart-items');
+        const count = document.getElementById('cart-count');
+        const totalEl = document.getElementById('total-price');
+        
+        count.innerText = cart.length;
+        let totalGeneral = 0;
+
+        if(cart.length === 0) {
+            container.innerHTML = `<p style="text-align:center; color:var(--text-muted); margin-top:20px;">Carrito vacío</p>`;
+            totalEl.innerText = "0 CUP";
+            return;
+        }
+
+        container.innerHTML = cart.map(item => {
+            const extrasTotal = item.extras.reduce((sum, ex) => sum + ex.precio, 0);
+            const itemFinalPrice = item.precioBase + extrasTotal;
+            totalGeneral += itemFinalPrice;
+
+            return `
+                <div class="cart-item">
+                    <i class="fas fa-times remove-item" onclick="removeFromCart(${item.uniqueId})"></i>
+                    <div style="font-weight:600; font-size:0.9rem">${item.nombre} ${item.tamano ? `(${item.tamano})` : ''}</div>
+                    <div style="font-size:0.75rem; color:var(--text-muted)">
+                        ${item.extras.length > 0 ? '+ ' + item.extras.map(e => e.nombre).join(', ') : 'Precio base'}
+                    </div>
+                    <div style="color:var(--gold); font-weight:bold">${itemFinalPrice} CUP</div>
+                </div>
+            `;
+        }).join('');
+
+        totalEl.innerText = `${totalGeneral} CUP`;
+        validateForm();
+    }
+
+    function removeFromCart(uid) {
+        cart = cart.filter(i => i.uniqueId !== uid);
+        updateCartUI();
+    }
+
+    // --- VALIDACIÓN Y FORMULARIO ---
+    function showForm() {
+        if(cart.length === 0) return alert("Cesta vacía");
+        document.getElementById('order-form').style.display = 'flex';
+        document.getElementById('btn-next-step').style.display = 'none';
+    }
+
+    function validateForm() {
+        const name = document.getElementById('name').value.trim();
+        const addr = document.getElementById('address').value.trim();
+        const land = document.getElementById('landmark').value.trim();
+        const phone = document.getElementById('phone').value.trim();
+        const wsBtn = document.getElementById('whatsapp-btn');
+        
+        // REGLA: +53 [espacio] y 8 números
+        const phoneRegex = /^\+53\s\d{8}$/;
+        const isPhoneValid = phoneRegex.test(phone);
+
+        // Color de error en teléfono
+        document.getElementById('phone').classList.toggle('error', phone.length > 4 && !isPhoneValid);
+
+        if(name.length > 2 && addr.length > 5 && land.length > 2 && isPhoneValid && cart.length > 0) {
+            wsBtn.style.display = 'block';
+            
+            const total = document.getElementById('total-price').innerText;
+            const itemsStr = cart.map(i => `• ${i.nombre}${i.tamano ? ` (${i.tamano})` : ''}${i.extras.length > 0 ? ' + Extras' : ''}`).join('%0A');
+            
+            let msg = `*PEDIDO NUEVO*%0A%0A`;
+            msg += `*Cliente:* ${name}%0A`;
+            msg += `*Dirección:* ${addr}%0A`;
+            msg += `*Referencia:* ${land}%0A`;
+            msg += `*Teléfono:* ${phone}%0A%0A`;
+            msg += `*Pedido:*%0A${itemsStr}%0A%0A`;
+            msg += `*TOTAL A PAGAR: ${total}*`;
+
+            wsBtn.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`;
+        } else {
+            wsBtn.style.display = 'none';
+        }
+    }
+
+    function showToast() {
+        const t = document.getElementById('toast');
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 2000);
+    }
+
+    function toggleCart() { document.getElementById('cart-sidebar').classList.toggle('active'); }
+
+    // Estado del negocio
+    function checkStatus() {
+        const h = new Date().getHours();
+        const open = h >= 9 && h < 24;
+        const el = document.getElementById('business-status');
+        el.innerHTML = open ? `<i class="fas fa-door-open"></i> Abierto` : `<i class="fas fa-door-closed"></i> Cerrado`;
+        el.className = `status-indicator ${open ? 'status-open' : 'status-closed'}`;
+    }
+
+    checkStatus();
+</script>
+
+</body>
+</html>
